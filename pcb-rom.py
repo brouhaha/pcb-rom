@@ -78,7 +78,7 @@ parser.add_argument("--length",           help = "board length", type = float, d
 
 parser.add_argument("--drive-layer",       help = "drive layer number", type = int, default = 1)
 parser.add_argument("--drive-trace",       help = "drive trace width", type = int, default = to_mm(10))
-parser.add_argument("--drive-space",       help = "drive trace spacing", type = int, default = to_mm(10))
+#parser.add_argument("--drive-space",       help = "drive trace spacing", type = int, default = to_mm(10))
 parser.add_argument("--drive-pitch",       help = "drive pitch", type = int, default = to_mm(50))
 
 #parser.add_argument("--coupling-length",   help = "drive-to-sense trace coupling length in mils", type = int, default = 40)
@@ -97,7 +97,7 @@ parser.add_argument("-o", "--output",     help="new Eagle board file", type = ar
 
 
 args = parser.parse_args()
-print(args)
+#print(args)
 
 default_unit = args.unit
 
@@ -109,7 +109,7 @@ array_width = args.words * args.drive_pitch - drive_space
 #print("array width %f %s" % (from_mm(array_width), default_unit))
 
 sense_space = (args.sense_pitch - (3 * args.sense_trace)) / 3.0
-print("sense space %f %s" % (from_mm(sense_space), default_unit))
+#print("sense space %f %s" % (from_mm(sense_space), default_unit))
 
 array_height = args.bits * args.sense_pitch - sense_space
 #print("array height %f %s" % (from_mm(array_height), default_unit))
@@ -124,24 +124,29 @@ board.add_rectangular_board_outline(0, 0, args.width, args.length);
 
 
 y = args.length / 2.0 + (args.words // 2) * args.drive_pitch
-word_y = [None] * (args.words + 1)
+word_y = [None] * args.words
 for word in range(args.words):
-    # each entry is [y_jog, y_left, y_right]
-    word_y [word] = [y, y - (args.drive_pitch + drive_space), y - 2 * (args.drive_pitch + args.drive_space)]
+    word_y [word] = [y, y - (args.drive_pitch - (args.drive_trace + drive_space))]
     y -= args.drive_pitch
-word_y[args.words] = [y, None, None]
 
 x = args.width / 2.0 + (args.bits // 2) * args.sense_pitch
-bit_x = [None] * args.words
+bit_x = [None] * (args.bits + 1)
 for bit in range(args.bits):
+    # entry is [jog, true, comp]
     bit_x [bit] = [x, x - (args.sense_trace + sense_space)]
-    print(bit, from_mm(bit_x[bit][0]), from_mm(bit_x[bit][1]))
     x -= args.sense_pitch
+bit_x[args.bits] = [x, None, None]
 
 for word in range(args.words):
     name = 'word%03d' % word
     signal = board.add_signal(name)
-    signal.add_wire(10, word_y[word][1], 90, word_y[word][1], width=args.drive_trace, layer=args.drive_layer)
+    signal.add_wire(5, word_y[word][0], 95, word_y[word][0], width=args.drive_trace, layer=args.drive_layer)
+    if word % 2 == 0:
+        signal.add_via(to_mm(100.0), word_y[word][0], drill = args.pad_drill)
+        signal.add_via(args.width - to_mm(200.0), word_y[word][0], drill = args.pad_drill)
+    else:
+        signal.add_via(to_mm(200.0), word_y[word][0] - args.drive_pitch, drill = args.pad_drill)
+        signal.add_via(args.width - to_mm(100.0), word_y[word][0] - args.drive_pitch, drill = args.pad_drill)
 
 for bit in range(args.bits):
     signal = board.add_signal('bit%03d' % bit)
