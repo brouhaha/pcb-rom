@@ -140,7 +140,17 @@ bit_x[args.bits] = [x, None, None]
 for word in range(args.words):
     name = 'word%03d' % word
     signal = board.add_signal(name)
-    signal.add_wire(5, word_y[word][0], 95, word_y[word][0], width=args.drive_trace, layer=args.drive_layer)
+    if word == 1:
+        x = args.bits + 1
+        signal.add_wire(5, word_y[word][0], bit_x[bit][0], word_y[word][0])
+        signal.add_wire(bit_x[bit][0], word_y[word][0], bit_x[bit][0], word_y[word][1])
+        y = 1
+        while bit >= 0:
+            signal.add_wire(x, word_y[word][0], x, word_y[word][1])
+            bit -= 1
+        signal.add_wire(bit_x[bit][0], word_y[word][0], 95, word_y[word][0])
+    else:
+        signal.add_wire(5, word_y[word][0], 95, word_y[word][0], width=args.drive_trace, layer=args.drive_layer)
     if word % 2 == 0:
         signal.add_via(to_mm(100.0), word_y[word][0], drill = args.pad_drill)
         signal.add_via(args.width - to_mm(200.0), word_y[word][0], drill = args.pad_drill)
