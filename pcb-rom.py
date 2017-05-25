@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Generate inductively-coupled memory PCB
-# Copyright 2016 Eric Smith <spacewar@gmail.com>
+# Copyright 2016, 2017 Eric Smith <spacewar@gmail.com>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the version 3 of the GNU General Public License
@@ -21,6 +21,8 @@ import sys
 
 # https://github.com/scott-griffiths/bitstring
 from bitstring import Bits
+
+from length import Length, LengthUnit
 
 from Eagle import EagleBoardFile, EaglePackage, EagleDeviceset, EagleDevice, EagleRectangle
 
@@ -46,24 +48,7 @@ def read_data(f, words, bits, stride):
     return data
 
 
-# all distances are kept in mm
-dist_conv = { 'in': 25.4,
-              'mil': 0.0254,
-              'mm': 1.0,
-              'cm': 10.0,
-              'm': 1000.0 }
-
-default_unit = 'mil'
-
-def to_mm(val, unit = default_unit):
-    return val * dist_conv[unit]
-
-def from_mm(val, unit = default_unit):
-    return val / dist_conv[unit]
-
-
-def arg_with_unit(x):
-    return int(x)
+show_default_units = ['mil', 'mm']
 
 
 class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter):
@@ -73,9 +58,9 @@ class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter):
             if action.default is not argparse.SUPPRESS:
                 defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
                 if action.option_strings or action.nargs in defaulting_nargs:
-                    if action.type == arg_with_unit:
-                        dv = action.default + 0.0
-                        help += ' (default: %.1f mils = %.2f mm)' % (from_mm(dv, 'mil'), dv)
+                    if action.type == Length:
+                        dv = action.default
+                        help += ' (default: %.1f mils = %.3f mm)' % (dv.conv('mil'), dv)
                     else:
                         help += ' (default: %(default)s)'
         return help
@@ -88,26 +73,28 @@ parser.add_argument("-w", "--words",      help = "word count (drive lines)", typ
 parser.add_argument("-b", "--bits",       help = "bit count (sense loops)", type = int, default = 64)
 parser.add_argument("--stride",           help = "data input word stride in bytes", type = int, default = None)
 
-parser.add_argument("-u", "--unit",       help = "default distance measurement unit", choices = ['in', 'mil', 'mm'], default = default_unit)
+parser.add_argument("-u", "--unit",
+                    help = "default distance measurement unit",
+            	    choices = [str(x) for x in LengthUnit.__members__],
+                    default = 'mm')
 
 
-
-parser.add_argument("--width",            help = "board width", type = arg_with_unit, default = to_mm(3900, 'mil'))
-parser.add_argument("--length",           help = "board length", type = arg_with_unit, default = to_mm(3900, 'mil'))
+parser.add_argument("--width",            help = "board width",  type = Length, default = Length('3.9 in'))
+parser.add_argument("--length",           help = "board length", type = Length, default = Length('3.9 in'))
 
 parser.add_argument("--drive-layer",       help = "drive layer number", type = int, default = 1)
-parser.add_argument("--drive-trace",       help = "drive trace width", type = arg_with_unit, default = to_mm(10, 'mil'))
-#parser.add_argument("--drive-space",       help = "drive trace spacing", type = arg_with_unit, default = to_mm(10, 'mil'))
-parser.add_argument("--drive-pitch",       help = "drive pitch", type = arg_with_unit, default = to_mm(50, 'mil'))
+parser.add_argument("--drive-trace",       help = "drive trace width", type = Length, default = Length('10 mil'))
+#parser.add_argument("--drive-space",       help = "drive trace spacing", type = Length, default = Length('10 mil))
+parser.add_argument("--drive-pitch",       help = "drive pitch", type = Length, default = Length('50 mil'))
 
-#parser.add_argument("--coupling-length",   help = "drive-to-sense trace coupling length in mils", type = arg_with_unit, default = 40)
+#parser.add_argument("--coupling-length",   help = "drive-to-sense trace coupling length in mils", type = Length, default = Length('40 mil'))
 
 parser.add_argument("--sense-layer",       help = "sense layer number", type = int, default = 16)
-parser.add_argument("--sense-trace",       help = "sense trace width", type = arg_with_unit, default = to_mm(10, 'mil'))
-#parser.add_argument("--sense-space",       help = "sense trace spacing", type = arg_with_unit, default = to_mm(10, 'mil'))
-parser.add_argument("--sense-pitch",       help = "sense pitch", type = arg_with_unit, default = to_mm(50, 'mil'))
+parser.add_argument("--sense-trace",       help = "sense trace width", type = Length, default = Length('10 mil'))
+#parser.add_argument("--sense-space",       help = "sense trace spacing", type = Length, default = Length('10 mil'))
+parser.add_argument("--sense-pitch",       help = "sense pitch", type = Length, default = Length('50 mil'))
 
-parser.add_argument("--pad-drill",         help = "pad drill diameter", type = arg_with_unit, default = to_mm(42, 'mil'))
+parser.add_argument("--pad-drill",         help = "pad drill diameter", type = Length, default = Length('42 mil'))
 
 #parser.add_argument("--ground-layer",      help = "ground plane layer number (0 for none)", type = int, default = 15)
 
