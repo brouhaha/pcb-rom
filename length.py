@@ -28,19 +28,30 @@ LengthUnit = Enum('LengthUnit', names = (('inch',     25.4),
                                          ('mils',      0.0254)))
 
 class Length(float):
-    def __new__(cls, val, default_unit = 'mm'):
+    __slots__ = ('unit')  # or could use ('__dict__')
+
+    def __new__(cls, val, unit = 'mm'):
         if isinstance(val, numbers.Number):
-            return super().__new__(cls, val)
+            self = super().__new__(cls, float(val))
+            self.unit = LengthUnit[unit]
+            return self
         if not isinstance(val, str):
             raise TypeError()
         for un in LengthUnit.__members__:
             if val.endswith(un):
-                return super().__new__(cls, float(val[:-len(un)].strip()) * LengthUnit[un].value)
+                self = super().__new__(cls, float(val[:-len(un)].strip()) * LengthUnit[un].value)
+                self.unit = LengthUnit[un]
+                return self
         else:
-            return float(val) * LengthUnit[default_unit].value
+            self = super().__new__(cls, float(val) * LengthUnit[unit].value)
+            self.unit = LengthUnit[unit]
+            return self
 
     def conv(self, unit):
         return self / LengthUnit[unit].value
+
+    def __str__(self):
+        return str(self.conv(self.unit.name)) + ' ' + self.unit.name
 
 
 if __name__ == '__main__':
