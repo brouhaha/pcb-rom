@@ -62,33 +62,52 @@ def from_mm(val, unit = default_unit):
     return val / dist_conv[unit]
 
 
+def arg_with_unit(x):
+    return int(x)
+
+
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter):
+    def _get_help_string(self, action):
+        help = action.help
+        if '%(default)' not in action.help:
+            if action.default is not argparse.SUPPRESS:
+                defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
+                if action.option_strings or action.nargs in defaulting_nargs:
+                    if action.type == arg_with_unit:
+                        dv = action.default + 0.0
+                        help += ' (default: %.1f mils = %.2f mm)' % (from_mm(dv, 'mil'), dv)
+                    else:
+                        help += ' (default: %(default)s)'
+        return help
+
+
 parser = argparse.ArgumentParser(description='inductively coupled PCB memory generator',
-                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                 formatter_class=CustomFormatter)
 
 parser.add_argument("-w", "--words",      help = "word count (drive lines)", type = int, default = 64)
 parser.add_argument("-b", "--bits",       help = "bit count (sense loops)", type = int, default = 64)
 parser.add_argument("--stride",           help = "data input word stride in bytes", type = int, default = None)
 
-parser.add_argument("-u", "--unit",       help = "distance measurement unit", choices = ['in', 'mil', 'mm'], default = default_unit)
+parser.add_argument("-u", "--unit",       help = "default distance measurement unit", choices = ['in', 'mil', 'mm'], default = default_unit)
 
 
 
-parser.add_argument("--width",            help = "board width", type = float, default = to_mm(3900))
-parser.add_argument("--length",           help = "board length", type = float, default = to_mm(3900))
+parser.add_argument("--width",            help = "board width", type = arg_with_unit, default = to_mm(3900, 'mil'))
+parser.add_argument("--length",           help = "board length", type = arg_with_unit, default = to_mm(3900, 'mil'))
 
 parser.add_argument("--drive-layer",       help = "drive layer number", type = int, default = 1)
-parser.add_argument("--drive-trace",       help = "drive trace width", type = int, default = to_mm(10))
-#parser.add_argument("--drive-space",       help = "drive trace spacing", type = int, default = to_mm(10))
-parser.add_argument("--drive-pitch",       help = "drive pitch", type = int, default = to_mm(50))
+parser.add_argument("--drive-trace",       help = "drive trace width", type = arg_with_unit, default = to_mm(10, 'mil'))
+#parser.add_argument("--drive-space",       help = "drive trace spacing", type = arg_with_unit, default = to_mm(10, 'mil'))
+parser.add_argument("--drive-pitch",       help = "drive pitch", type = arg_with_unit, default = to_mm(50, 'mil'))
 
-#parser.add_argument("--coupling-length",   help = "drive-to-sense trace coupling length in mils", type = int, default = 40)
+#parser.add_argument("--coupling-length",   help = "drive-to-sense trace coupling length in mils", type = arg_with_unit, default = 40)
 
 parser.add_argument("--sense-layer",       help = "sense layer number", type = int, default = 16)
-parser.add_argument("--sense-trace",       help = "sense trace width", type = int, default = to_mm(10))
-#parser.add_argument("--sense-space",       help = "sense trace spacing", type = int, default = to_mm(10))
-parser.add_argument("--sense-pitch",       help = "sense pitch", type = int, default = to_mm(50))
+parser.add_argument("--sense-trace",       help = "sense trace width", type = arg_with_unit, default = to_mm(10, 'mil'))
+#parser.add_argument("--sense-space",       help = "sense trace spacing", type = arg_with_unit, default = to_mm(10, 'mil'))
+parser.add_argument("--sense-pitch",       help = "sense pitch", type = arg_with_unit, default = to_mm(50, 'mil'))
 
-parser.add_argument("--pad-drill",         help = "pad drill diameter", type = int, default = to_mm(42))
+parser.add_argument("--pad-drill",         help = "pad drill diameter", type = arg_with_unit, default = to_mm(42, 'mil'))
 
 #parser.add_argument("--ground-layer",      help = "ground plane layer number (0 for none)", type = int, default = 15)
 
