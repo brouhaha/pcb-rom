@@ -82,14 +82,14 @@ parser.add_argument("-u", "--unit",
 parser.add_argument("--width",            help = "board width",  type = Length, default = Length('3.9 in'))
 parser.add_argument("--length",           help = "board length", type = Length, default = Length('3.9 in'))
 
-parser.add_argument("--drive-layer",       help = "drive layer number", type = int, default = 1)
+parser.add_argument("--drive-layer",       help = "drive layer number", type = int, default = 16)
 parser.add_argument("--drive-trace",       help = "drive trace width", type = Length, default = Length('10 mil'))
 #parser.add_argument("--drive-space",       help = "drive trace spacing", type = Length, default = Length('10 mil))
 parser.add_argument("--drive-pitch",       help = "drive pitch", type = Length, default = Length('50 mil'))
 
 #parser.add_argument("--coupling-length",   help = "drive-to-sense trace coupling length in mils", type = Length, default = Length('40 mil'))
 
-parser.add_argument("--sense-layer",       help = "sense layer number", type = int, default = 16)
+parser.add_argument("--sense-layer",       help = "sense layer number", type = int, default = 1)
 parser.add_argument("--sense-trace",       help = "sense trace width", type = Length, default = Length('10 mil'))
 #parser.add_argument("--sense-space",       help = "sense trace spacing", type = Length, default = Length('10 mil'))
 parser.add_argument("--sense-pitch",       help = "sense pitch", type = Length, default = Length('50 mil'))
@@ -103,7 +103,7 @@ parser.add_argument("-o", "--output",     help="new Eagle board file", type = ar
 
 
 args = parser.parse_args()
-#print(args)
+print(args)
 
 default_unit = args.unit
 
@@ -158,11 +158,11 @@ for word in range(args.words):
     else:
         signal.add_wire(5, word_y[word][0], 95, word_y[word][0], width=args.drive_trace, layer=args.drive_layer)
     if word % 2 == 0:
-        signal.add_via(to_mm(100.0), word_y[word][0], drill = args.pad_drill)
-        signal.add_via(args.width - to_mm(200.0), word_y[word][0], drill = args.pad_drill)
+        signal.add_via(Length('100.0 mil'), word_y[word][0], drill = args.pad_drill)
+        signal.add_via(args.width - Length('200.0 mil'), word_y[word][0], drill = args.pad_drill)
     else:
-        signal.add_via(to_mm(200.0), word_y[word][0] - args.drive_pitch, drill = args.pad_drill)
-        signal.add_via(args.width - to_mm(100.0), word_y[word][0] - args.drive_pitch, drill = args.pad_drill)
+        signal.add_via(Length('200.0 mil'), word_y[word][0] - args.drive_pitch, drill = args.pad_drill)
+        signal.add_via(args.width - Length('100.0 mil'), word_y[word][0] - args.drive_pitch, drill = args.pad_drill)
 
 for bit in range(args.bits):
     signal = board.add_signal('bit%03d' % bit)

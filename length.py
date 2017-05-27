@@ -51,7 +51,7 @@ class Length(float):
         return self / LengthUnit[unit].value
 
     def __str__(self):
-        return str(self.conv(self.unit.name)) + ' ' + self.unit.name
+        return str(self / LengthUnit[self.unit.name].value) + ' ' + self.unit.name
 
 
 if __name__ == '__main__':
@@ -61,4 +61,4 @@ if __name__ == '__main__':
               '7mm',
               '0.1 m',
               '37ug']:
-        print(s, Length(s))
+        print(s, Length(s), Length(s).conv('inches'))
