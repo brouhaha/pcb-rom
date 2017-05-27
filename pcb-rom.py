@@ -24,7 +24,7 @@ from bitstring import Bits
 
 from length import Length, LengthUnit
 
-from Eagle import EagleBoardFile, EaglePackage, EagleDeviceset, EagleDevice, EagleRectangle
+from eagle import EagleBoardFile, EaglePackage, EagleDeviceset, EagleDevice, EagleRectangle
 
 
 def read_data(f, words, bits, stride):
@@ -103,7 +103,7 @@ parser.add_argument("-o", "--output",     help="new Eagle board file", type = ar
 
 
 args = parser.parse_args()
-print(args)
+#print(args)
 
 default_unit = args.unit
 
