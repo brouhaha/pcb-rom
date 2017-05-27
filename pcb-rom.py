@@ -17,6 +17,7 @@
 
 import argparse
 import io
+import math
 import sys
 
 # https://github.com/scott-griffiths/bitstring
@@ -103,6 +104,10 @@ parser.add_argument("-o", "--output",     help="new Eagle board file", type = ar
 args = parser.parse_args()
 #print(args)
 
+
+w_conv = 'W%%0%dd' % (1 + int(math.floor(math.log10(args.words - 1))))
+b_conv = 'B%%0%dd' % (1 + int(math.floor(math.log10(args.bits - 1))))
+
 default_unit = args.unit
 
 
@@ -135,29 +140,31 @@ for word in range(args.words):
                      y + (args.trace_width + drive_space) / 2.0]
     y += args.drive_pitch
 
-x = args.width / 2.0 + (args.bits // 2) * args.sense_pitch
+x = args.width / 2.0 + ((args.bits // 2) - 0.5) * args.sense_pitch
 bit_x = [None] * (args.bits + 1)
 for bit in range(args.bits):
     # entry is [jog, true, comp]
-    bit_x [bit] = [x, x - (args.trace_width + sense_space)]
+    bit_x [bit] = [x,
+                   x - (args.sense_pitch - 2.0 * args.trace_width) / 2.0,
+                   x + (args.sense_pitch - 2.0 * args.trace_width) / 2.0 ]
     x -= args.sense_pitch
 bit_x[args.bits] = [x, None, None]
 
 for word in range(args.words):
-    name = 'W%03d' % word
+    name = w_conv % word
     signal = board.add_signal(name)
     if word % 2:
         cx1 = args.width - Length('100.0 mil')
         cx2 = args.width - Length('200.0 mil')
         cy = word_y[word][0] - args.drive_pitch / 2.0
 
-        lx = cx2 - Length('100.0 mil')
+        lx = cx2 - Length('50.0 mil')
         ly = cy
         ls = name
         la = 'center-right'
 
         x1 = cx2 - args.drive_pitch
-        x2 = bit_x[args.bits][0]
+        x2 = bit_x[args.bits - 1][1] - 2.0 * args.trace_width
         y1 = word_y[word][2]
         y2 = word_y[word][1]
 
@@ -171,13 +178,13 @@ for word in range(args.words):
         cx2 = Length('200.0 mil')
         cy = word_y[word][0] + args.drive_pitch / 2.0
 
-        lx = cx2 + Length('100.0 mil')
+        lx = cx2 + Length('50.0 mil')
         ly = cy
         ls = name
         la = 'center-left'
 
         x1 = cx2 + args.drive_pitch
-        x2 = bit_x[0][0]
+        x2 = bit_x[0][2] + 2.0 * args.trace_width
         y1 = word_y[word][1]
         y2 = word_y[word][2]
 
@@ -200,15 +207,74 @@ for word in range(args.words):
 
     board.add_text(ls, lx, ly, size=args.drive_pitch, align=la, layer=21)
 
-if False:
-  for bit in range(args.bits):
-    signal = board.add_signal('bit%03d' % bit)
-    signal.add_wire(bit_x[bit][0], 5, bit_x[bit][0], 95, width=args.trace_width, layer=args.sense_layer)
-    signal.add_wire(bit_x[bit][1], 5, bit_x[bit][1], 95, width=args.trace_width, layer=args.sense_layer)
-    if bit % 2:
-        y = 5
+board.add_text('+', Length('100.0 mil'), word_y[0][0] - args.drive_pitch, size=args.drive_pitch, align='center', layer=21)
+board.add_text('-', Length('200.0 mil'), word_y[0][0] - args.drive_pitch, size=args.drive_pitch, align='center', layer=21)
+board.add_text('-', args.width - Length('200.0 mil'), word_y[0][0] - args.drive_pitch, size=args.drive_pitch, align='center', layer=21)
+board.add_text('+', args.width - Length('100.0 mil'), word_y[0][0] - args.drive_pitch, size=args.drive_pitch, align='center', layer=21)
+board.add_text('+', Length('100.0 mil'), word_y[args.words-1][0] + args.drive_pitch, size=args.drive_pitch, align='center', layer=21)
+board.add_text('-', Length('200.0 mil'), word_y[args.words-1][0] + args.drive_pitch, size=args.drive_pitch, align='center', layer=21)
+board.add_text('-', args.width - Length('200.0 mil'), word_y[args.words-1][0] + args.drive_pitch, size=args.drive_pitch, align='center', layer=21)
+board.add_text('+', args.width - Length('100.0 mil'), word_y[args.words-1][0] + args.drive_pitch, size=args.drive_pitch, align='center', layer=21)
+
+for bit in range(args.bits):
+    signal = board.add_signal(b_conv % bit)
+
+    if bit % 2 == 0:
+        cx = bit_x[bit][0] - args.drive_pitch / 2.0
+        cy1 = Length('100.0 mil')
+        cy2 = args.length - Length('200.0 mil')
     else:
-        y = 95
-    signal.add_wire(bit_x[bit][0], y, bit_x[bit][1], y, width=args.trace_width, layer=args.sense_layer)
+        cx = bit_x[bit][0] + args.drive_pitch / 2.0
+        cy1 = Length('200.0 mil')
+        cy2 = args.length - Length('100.0 mil')
+
+    y1 = word_y[0][1] - 2.0 * args.trace_width
+    y2 = word_y[args.words - 1][2] + 2.0 * args.trace_width
+
+    signal.add_via(cx, cy1, drill = args.pad_drill)
+
+    if bit % 2 == 0:
+        signal.add_wire(cx, cy1, cx + args.sense_pitch, cy1 + args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(cx + args.sense_pitch, cy1 + args.sense_pitch, cx + args.sense_pitch, cy1 + 3.0 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(cx + args.sense_pitch, cy1 + 3.0 * args.sense_pitch, cx + args.sense_pitch / 2.0, cy1 + 3.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        x = bit_x[bit][0]
+        y = word_y[0][1] - 2.0 * args.trace_width
+        signal.add_wire(cx + args.sense_pitch / 2.0, cy1 + 3.5 * args.sense_pitch, x, y, width=args.trace_width, layer=args.sense_layer)
+    else:
+        signal.add_wire(cx, cy1, cx, cy1 + args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(cx, cy1, cx, cy1 + args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(cx, cy1 + args.sense_pitch, cx - args.sense_pitch / 2.0, cy1 + 1.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        x = bit_x[bit][0]
+        y = word_y[0][1] - 2.0 * args.trace_width
+        signal.add_wire(cx - args.sense_pitch / 2.0, cy1 + 1.5 * args.sense_pitch, x, y, width=args.trace_width, layer=args.sense_layer)
+
+    # following two are temporary, replace with word loop
+    signal.add_wire(bit_x[bit][1], y1, bit_x[bit][1], y2, width=args.trace_width, layer=args.sense_layer)
+    signal.add_wire(bit_x[bit][2], y1, bit_x[bit][2], y2, width=args.trace_width, layer=args.sense_layer)
+
+    # XXX following is temporary
+    y = word_y[args.words - 1][2]
+    x = bit_x[bit][2]
+
+    y += 2.0 * args.trace_width
+    signal.add_wire(x, y, bit_x[bit][0], y, width=args.trace_width, layer=args.sense_layer)
+
+    if bit % 2 == 0:
+        signal.add_wire(bit_x[bit][0], y, bit_x[bit][0], cy2 - 1.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(bit_x[bit][0], cy2 - 1.5 * args.sense_pitch, cx, cy2 - args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(cx, cy2 - args.sense_pitch, cx, cy2, width = args.trace_width, layer=args.sense_layer)
+    else:
+        signal.add_wire(bit_x[bit][0], y, bit_x[bit][0], cy2 - 3.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(bit_x[bit][0], cy2 - 3.5 * args.sense_pitch, cx - args.sense_pitch, cy2 - 3.0 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(cx - args.sense_pitch, cy2 - 3.0 * args.sense_pitch, cx - args.sense_pitch, cy2 - args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(cx - args.sense_pitch, cy2 - args.sense_pitch, cx, cy2, width=args.trace_width, layer=args.sense_layer)
+    
+    signal.add_via(cx, cy2, drill = args.pad_drill)
+
+
+board.add_text(b_conv % 0, bit_x[0][0] + args.sense_pitch, Length('100.0 mil'), size=args.drive_pitch, align='center-left', layer=21)
+board.add_text(b_conv % (args.bits - 1), bit_x[args.bits - 1][0] - args.sense_pitch, Length('200.0 mil'), size=args.drive_pitch, align='center-right', layer=21)
+board.add_text(b_conv % 0, bit_x[0][0] + args.sense_pitch, args.length - Length('200.0 mil'), size=args.drive_pitch, align='center-left', layer=21)
+board.add_text(b_conv % (args.bits - 1), bit_x[args.bits - 1][0] - args.sense_pitch, args.length - Length('100.0 mil'), size=args.drive_pitch, align='center-right', layer=21)
 
 board.write(args.output)
