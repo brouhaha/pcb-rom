@@ -49,6 +49,10 @@ def read_data(f, words, bits, stride):
     return data
 
 
+def get_bit(data, word, bit):
+    return 0
+
+
 show_default_units = ['mil', 'mm']
 
 
@@ -248,23 +252,33 @@ for bit in range(args.bits):
         y = word_y[0][1] - 2.0 * args.trace_width
         signal.add_wire(cx - args.sense_pitch / 2.0, cy1 + 1.5 * args.sense_pitch, x, y, width=args.trace_width, layer=args.sense_layer)
 
-    # following two are temporary, replace with word loop
-    signal.add_wire(bit_x[bit][1], y1, bit_x[bit][1], y2, width=args.trace_width, layer=args.sense_layer)
-    signal.add_wire(bit_x[bit][2], y1, bit_x[bit][2], y2, width=args.trace_width, layer=args.sense_layer)
+    for word in range(args.words):
+        data_bit = get_bit(None, word, bit)
+        if data_bit:
+            x0 = bit_x[bit][1]
+            x1 = bit_x[bit][2]
+        else:
+            x0 = bit_x[bit][2]
+            x1 = bit_x[bit][1]
+        new_x = x0
+        if x0 != x:
+            signal.add_wire(x, y, x0, y, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(x0, y, x0, word_y[word][1], width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(x0, word_y[word][1], x1, word_y[word][1], width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(x1, word_y[word][1], x1, word_y[word][2], width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(x1, word_y[word][2], x0, word_y[word][2], width=args.trace_width, layer=args.sense_layer)
+        x = x0
+        y = word_y[word][2]
 
-    # XXX following is temporary
-    y = word_y[args.words - 1][2]
-    x = bit_x[bit][2]
-
-    y += 2.0 * args.trace_width
-    signal.add_wire(x, y, bit_x[bit][0], y, width=args.trace_width, layer=args.sense_layer)
+    signal.add_wire(x, y, x, y + 2.0 * args.trace_width, width = args.trace_width, layer=args.sense_layer)
+    signal.add_wire(x, y + 2.0 * args.trace_width, bit_x[bit][0], y + 2.0 * args.trace_width, width = args.trace_width, layer=args.sense_layer)
 
     if bit % 2 == 0:
-        signal.add_wire(bit_x[bit][0], y, bit_x[bit][0], cy2 - 1.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(bit_x[bit][0], y + 2.0 * args.trace_width, bit_x[bit][0], cy2 - 1.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(bit_x[bit][0], cy2 - 1.5 * args.sense_pitch, cx, cy2 - args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(cx, cy2 - args.sense_pitch, cx, cy2, width = args.trace_width, layer=args.sense_layer)
     else:
-        signal.add_wire(bit_x[bit][0], y, bit_x[bit][0], cy2 - 3.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(bit_x[bit][0], y + 2.0 * args.trace_width, bit_x[bit][0], cy2 - 3.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(bit_x[bit][0], cy2 - 3.5 * args.sense_pitch, cx - args.sense_pitch, cy2 - 3.0 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(cx - args.sense_pitch, cy2 - 3.0 * args.sense_pitch, cx - args.sense_pitch, cy2 - args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(cx - args.sense_pitch, cy2 - args.sense_pitch, cx, cy2, width=args.trace_width, layer=args.sense_layer)
