@@ -169,6 +169,7 @@ for word in range(args.words):
 
         x1 = cx2 - args.drive_pitch
         x2 = bit_x[args.bits - 1][1] - 2.0 * args.trace_width
+        x3 = cx2 - 1.5 * args.drive_pitch
         y1 = word_y[word][2]
         y2 = word_y[word][1]
 
@@ -189,6 +190,7 @@ for word in range(args.words):
 
         x1 = cx2 + args.drive_pitch
         x2 = bit_x[0][2] + 2.0 * args.trace_width
+        x3 = cx2 + 1.5 * args.drive_pitch
         y1 = word_y[word][1]
         y2 = word_y[word][2]
 
@@ -203,8 +205,10 @@ for word in range(args.words):
     signal.add_wire(cx2a, cy2a, x1,   y1,   layer=args.drive_layer, width=args.trace_width)
     signal.add_wire(x1,   y1,   x2,   y1,   layer=args.drive_layer, width=args.trace_width)
     signal.add_wire(x2,   y1,   x2,   y2,   layer=args.drive_layer, width=args.trace_width)
-    signal.add_wire(x2,   y2,   x1,   y2,   layer=args.drive_layer, width=args.trace_width)
-    signal.add_wire(x1,   y2,   cx2,  cy,   layer=args.drive_layer, width=args.trace_width)
+
+    signal.add_wire(x2,   y2,   x3,   y2,   layer=args.drive_layer, width=args.trace_width)
+    signal.add_wire(x3,   y2,   x1,   cy,   layer=args.drive_layer, width=args.trace_width)
+    signal.add_wire(x1,   cy,   cx2,  cy,   layer=args.drive_layer, width=args.trace_width)
 
     signal.add_via(cx1, cy, drill = args.pad_drill)
     signal.add_via(cx2, cy, drill = args.pad_drill)
