@@ -83,15 +83,13 @@ parser.add_argument("--width",            help = "board width",  type = Length, 
 parser.add_argument("--length",           help = "board length", type = Length, default = Length('3.9 in'))
 
 parser.add_argument("--drive-layer",       help = "drive layer number", type = int, default = 16)
-parser.add_argument("--drive-trace",       help = "drive trace width", type = Length, default = Length('10 mil'))
-#parser.add_argument("--drive-space",       help = "drive trace spacing", type = Length, default = Length('10 mil))
+parser.add_argument("--drive-width",       help = "drive trace width", type = Length, default = Length('12.5 mil'))
 parser.add_argument("--drive-pitch",       help = "drive pitch", type = Length, default = Length('50 mil'))
 
 #parser.add_argument("--coupling-length",   help = "drive-to-sense trace coupling length in mils", type = Length, default = Length('40 mil'))
 
 parser.add_argument("--sense-layer",       help = "sense layer number", type = int, default = 1)
-parser.add_argument("--sense-trace",       help = "sense trace width", type = Length, default = Length('10 mil'))
-#parser.add_argument("--sense-space",       help = "sense trace spacing", type = Length, default = Length('10 mil'))
+parser.add_argument("--sense-width",       help = "sense trace width", type = Length, default = Length('8.5 mil'))
 parser.add_argument("--sense-pitch",       help = "sense pitch", type = Length, default = Length('50 mil'))
 
 parser.add_argument("--pad-drill",         help = "pad drill diameter", type = Length, default = Length('42 mil'))
@@ -108,17 +106,17 @@ args = parser.parse_args()
 default_unit = args.unit
 
 
-drive_space = args.drive_trace
-#print("drive space %f %s" % (from_mm(drive_space), default_unit))
+drive_space = (args.drive_pitch - (2 * args.drive_width)) / 2.0
+print("drive space %f %s" % (drive_space, default_unit))
 
-array_width = args.words * args.drive_pitch - drive_space
-#print("array width %f %s" % (from_mm(array_width), default_unit))
+array_width = args.words * args.drive_pitch
+print("array width %f %s" % (array_width, default_unit))
 
-sense_space = (args.sense_pitch - (3 * args.sense_trace)) / 3.0
-#print("sense space %f %s" % (from_mm(sense_space), default_unit))
+sense_space = (args.sense_pitch - (3 * args.sense_width)) / 3.0
+print("sense space %f %s" % (sense_space, default_unit))
 
 array_height = args.bits * args.sense_pitch - sense_space
-#print("array height %f %s" % (from_mm(array_height), default_unit))
+print("array height %f %s" % (array_height, default_unit))
 
 #data = read_data(args.input, args.words, args.bits, args.stride)
 
@@ -132,14 +130,14 @@ board.add_rectangular_board_outline(0, 0, args.width, args.length);
 y = args.length / 2.0 + (args.words // 2) * args.drive_pitch
 word_y = [None] * args.words
 for word in range(args.words):
-    word_y [word] = [y, y - (args.drive_pitch - (args.drive_trace + drive_space))]
+    word_y [word] = [y, y - (args.drive_pitch - (args.drive_width + drive_space))]
     y -= args.drive_pitch
 
 x = args.width / 2.0 + (args.bits // 2) * args.sense_pitch
 bit_x = [None] * (args.bits + 1)
 for bit in range(args.bits):
     # entry is [jog, true, comp]
-    bit_x [bit] = [x, x - (args.sense_trace + sense_space)]
+    bit_x [bit] = [x, x - (args.sense_width + sense_space)]
     x -= args.sense_pitch
 bit_x[args.bits] = [x, None, None]
 
@@ -148,15 +146,15 @@ for word in range(args.words):
     signal = board.add_signal(name)
     if word == 1:
         x = args.bits + 1
-        signal.add_wire(5, word_y[word][0], bit_x[bit][0], word_y[word][0])
-        signal.add_wire(bit_x[bit][0], word_y[word][0], bit_x[bit][0], word_y[word][1])
+        signal.add_wire(5, word_y[word][0], bit_x[bit][0], word_y[word][0], layer=args.drive_layer, width=args.drive_width)
+        signal.add_wire(bit_x[bit][0], word_y[word][0], bit_x[bit][0], word_y[word][1], layer=args.drive_layer, width=args.drive_width)
         y = 1
         while bit >= 0:
-            signal.add_wire(x, word_y[word][0], x, word_y[word][1])
+            signal.add_wire(x, word_y[word][0], x, word_y[word][1], layer=args.drive_layer, width=args.drive_width)
             bit -= 1
-        signal.add_wire(bit_x[bit][0], word_y[word][0], 95, word_y[word][0])
+        signal.add_wire(bit_x[bit][0], word_y[word][0], 95, word_y[word][0], layer=args.drive_layer, width=args.drive_width)
     else:
-        signal.add_wire(5, word_y[word][0], 95, word_y[word][0], width=args.drive_trace, layer=args.drive_layer)
+        signal.add_wire(5, word_y[word][0], 95, word_y[word][0], layer=args.drive_layer, width=args.drive_width)
     if word % 2 == 0:
         signal.add_via(Length('100.0 mil'), word_y[word][0], drill = args.pad_drill)
         signal.add_via(args.width - Length('200.0 mil'), word_y[word][0], drill = args.pad_drill)
@@ -166,12 +164,12 @@ for word in range(args.words):
 
 for bit in range(args.bits):
     signal = board.add_signal('bit%03d' % bit)
-    signal.add_wire(bit_x[bit][0], 5, bit_x[bit][0], 95, width=args.sense_trace, layer=args.sense_layer)
-    signal.add_wire(bit_x[bit][1], 5, bit_x[bit][1], 95, width=args.sense_trace, layer=args.sense_layer)
+    signal.add_wire(bit_x[bit][0], 5, bit_x[bit][0], 95, width=args.sense_width, layer=args.sense_layer)
+    signal.add_wire(bit_x[bit][1], 5, bit_x[bit][1], 95, width=args.sense_width, layer=args.sense_layer)
     if bit % 2:
         y = 5
     else:
         y = 95
-    signal.add_wire(bit_x[bit][0], y, bit_x[bit][1], y, width=args.sense_trace, layer=args.sense_layer)
+    signal.add_wire(bit_x[bit][0], y, bit_x[bit][1], y, width=args.sense_width, layer=args.sense_layer)
 
 board.write(args.output)
