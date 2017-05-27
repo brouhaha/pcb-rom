@@ -107,16 +107,16 @@ default_unit = args.unit
 
 
 drive_space = (args.drive_pitch - (2 * args.drive_width)) / 2.0
-print("drive space %f %s" % (drive_space, default_unit))
+#print("drive space %f %s" % (drive_space, default_unit))
 
 array_width = args.words * args.drive_pitch
-print("array width %f %s" % (array_width, default_unit))
+#print("array width %f %s" % (array_width, default_unit))
 
 sense_space = (args.sense_pitch - (3 * args.sense_width)) / 3.0
-print("sense space %f %s" % (sense_space, default_unit))
+#print("sense space %f %s" % (sense_space, default_unit))
 
 array_height = args.bits * args.sense_pitch - sense_space
-print("array height %f %s" % (array_height, default_unit))
+#print("array height %f %s" % (array_height, default_unit))
 
 #data = read_data(args.input, args.words, args.bits, args.stride)
 
@@ -144,12 +144,17 @@ for bit in range(args.bits):
 bit_x[args.bits] = [x, None, None]
 
 for word in range(args.words):
-    name = 'word%03d' % word
+    name = 'W%03d' % word
     signal = board.add_signal(name)
     if word % 2:
         cx1 = args.width - Length('100.0 mil')
         cx2 = args.width - Length('200.0 mil')
         cy = word_y[word][0] - args.drive_pitch / 2.0
+
+        lx = cx2 - Length('100.0 mil')
+        ly = cy
+        ls = name
+        la = 'center-right'
 
         x1 = cx2 - args.drive_pitch
         x2 = bit_x[args.bits][0]
@@ -165,6 +170,11 @@ for word in range(args.words):
         cx1 = Length('100.0 mil')
         cx2 = Length('200.0 mil')
         cy = word_y[word][0] + args.drive_pitch / 2.0
+
+        lx = cx2 + Length('100.0 mil')
+        ly = cy
+        ls = name
+        la = 'center-left'
 
         x1 = cx2 + args.drive_pitch
         x2 = bit_x[0][0]
@@ -187,6 +197,8 @@ for word in range(args.words):
 
     signal.add_via(cx1, cy, drill = args.pad_drill)
     signal.add_via(cx2, cy, drill = args.pad_drill)
+
+    board.add_text(ls, lx, ly, size=args.drive_pitch, align=la, layer=21)
 
 if False:
   for bit in range(args.bits):

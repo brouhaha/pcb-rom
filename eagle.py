@@ -20,12 +20,14 @@ import io
 from xml.etree.ElementTree import ElementTree, Element, SubElement, Comment, tostring
 
 class EagleXMLElement:
-    def __init__(self, name, attrs = None, from_element = None):
+    def __init__(self, name, text = None, attrs = None, from_element = None):
         if from_element is None:
             if attrs is None:
                 self.element = Element(name)
             else:
                 self.element = Element(name, attrs)
+            if text is not None:
+                self.element.text = text
         else:
             self.element = from_element
         self.primitives = []
@@ -44,7 +46,7 @@ class EagleXMLElement:
 
 class EagleSetting(EagleXMLElement):
     def __init__(self, name, value):
-        super().__init__('setting', {name: value})
+        super().__init__('setting', attrs = {name: value})
 
 
 class EagleSettings(EagleXMLElement):
@@ -59,15 +61,15 @@ class EagleSettings(EagleXMLElement):
 
 class EagleGrid(EagleXMLElement):
     def __init__(self):
-        super().__init__('grid', { 'distance': '0.1',
-                                   'unitdist': 'inch',
-                                   'unit': 'inch',
-                                   'style': 'lines',
-                                   'multiple': '1',
-                                   'display': 'no',
-                                   'altdistance': '0.01',
-                                   'altunitdist': 'inch',
-                                   'altunit': 'inch' })
+        super().__init__('grid', attrs = { 'distance': '0.1',
+                                           'unitdist': 'inch',
+                                           'unit': 'inch',
+                                           'style': 'lines',
+                                           'multiple': '1',
+                                           'display': 'no',
+                                           'altdistance': '0.01',
+                                           'altunitdist': 'inch',
+                                           'altunit': 'inch' })
 
 
 def eagle_boolean(b):
@@ -78,12 +80,12 @@ def eagle_boolean(b):
     
 class EagleLayer(EagleXMLElement):
     def __init__(self, number, name, color, fill, visible, active):
-        super().__init__('layer', { 'number':  str(number),
-                                    'name':    name,
-                                    'color':   str(color),
-                                    'fill':    str(fill),
-                                    'visible': eagle_boolean(visible),
-                                    'active':  eagle_boolean(active) })
+        super().__init__('layer', attrs = { 'number':  str(number),
+                                            'name':    name,
+                                            'color':   str(color),
+                                            'fill':    str(fill),
+                                            'visible': eagle_boolean(visible),
+                                            'active':  eagle_boolean(active) })
         self.number = number
         self.name = name
 
@@ -210,8 +212,8 @@ class EagleFile(metaclass = ABCMeta):
 
 
 class EaglePrimitive(EagleXMLElement):
-    def __init__(self, kind, attrs):
-        super().__init__(kind, attrs)
+    def __init__(self, kind, text = None, attrs = None):
+        super().__init__(kind, text = text, attrs = attrs)
 
 
 class EagleRectangle(EaglePrimitive):
@@ -353,7 +355,7 @@ class EagleElements(EagleXMLElement):
 
 class EagleSignal(EaglePrimitive):
     def __init__(self, name):
-        super().__init__('signal', { 'name' : name })
+        super().__init__('signal', attrs = { 'name' : name })
 
     def add_wire(self, x1, y1, x2, y2, layer, width):
         self.add_primitive(EagleWire(x1, y1, x2, y2, layer, width))
@@ -372,13 +374,21 @@ class EagleSignals(EagleXMLElement):
 
 class EagleWire(EaglePrimitive):
     def __init__(self, x1, y1, x2, y2, layer, width):
-        super().__init__('wire', { 'layer': str(layer),
-                                   'width': '%.6f' % width,
-                                   'x1': '%.6f' % x1,
-                                   'y1': '%.6f' % y1,
-                                   'x2': '%.6f' % x2,
-                                   'y2': '%.6f' % y2 })
+        super().__init__('wire', attrs = { 'layer': str(layer),
+                                           'width': '%.6f' % width,
+                                           'x1': '%.6f' % x1,
+                                           'y1': '%.6f' % y1,
+                                           'x2': '%.6f' % x2,
+                                           'y2': '%.6f' % y2 })
 
+
+class EagleText(EaglePrimitive):
+    def __init__(self, text, x, y, size, align, layer):
+        super().__init__('text', text = text, attrs = { 'x': '%.6f' % x,
+                                                        'y': '%.6f' % y,
+                                                        'size': '%.6f' % size,
+                                                        'layer': str(layer),
+                                                        'align': str(align) })
 
 class EagleVia(EaglePrimitive):
     def __init__(self, x, y, drill,
@@ -393,7 +403,7 @@ class EagleVia(EaglePrimitive):
             d['diameter'] = '%.6f' % diameter
         if shape is not None:
             d['shape'] = shape
-        super().__init__('via', d)
+        super().__init__('via', attrs = d)
 
 
 class EagleBoard(EagleXMLElement):
@@ -435,6 +445,10 @@ class EagleBoard(EagleXMLElement):
     def add_signal(self, name):
         return self.signals.add_signal(name)
 
+    def add_text(self, text, x, y, size, align, layer):
+        return self.plain.add_primitive(EagleText(text, x, y, size, align, layer))
+        
+
 
 class EagleLibraryFile(EagleFile):
     def __init__(self):
@@ -460,6 +474,10 @@ class EagleBoardFile(EagleFile):
 
     def add_signal(self, name):
         return self.board.add_signal(name)
+
+    def add_text(self, text, x, y, size, align, layer):
+        return self.board.add_text(text, x, y, size, align, layer)
+
 
 '''
 class EagleSchematic(EagleFile):
