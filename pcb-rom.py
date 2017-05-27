@@ -127,11 +127,13 @@ board = EagleBoardFile()
 board.add_rectangular_board_outline(0, 0, args.width, args.length);
 
 
-y = args.length / 2.0 + (args.words // 2) * args.drive_pitch
+y = args.length / 2.0 - ((args.words // 2) - 0.5) * args.drive_pitch
 word_y = [None] * args.words
 for word in range(args.words):
-    word_y [word] = [y, y - (args.drive_pitch - (args.drive_width + drive_space))]
-    y -= args.drive_pitch
+    word_y [word] = [y,
+                     y - (args.drive_width + drive_space) / 2.0,
+                     y + (args.drive_width + drive_space) / 2.0]
+    y += args.drive_pitch
 
 x = args.width / 2.0 + (args.bits // 2) * args.sense_pitch
 bit_x = [None] * (args.bits + 1)
@@ -144,25 +146,50 @@ bit_x[args.bits] = [x, None, None]
 for word in range(args.words):
     name = 'word%03d' % word
     signal = board.add_signal(name)
-    if word == 1:
-        x = args.bits + 1
-        signal.add_wire(5, word_y[word][0], bit_x[bit][0], word_y[word][0], layer=args.drive_layer, width=args.drive_width)
-        signal.add_wire(bit_x[bit][0], word_y[word][0], bit_x[bit][0], word_y[word][1], layer=args.drive_layer, width=args.drive_width)
-        y = 1
-        while bit >= 0:
-            signal.add_wire(x, word_y[word][0], x, word_y[word][1], layer=args.drive_layer, width=args.drive_width)
-            bit -= 1
-        signal.add_wire(bit_x[bit][0], word_y[word][0], 95, word_y[word][0], layer=args.drive_layer, width=args.drive_width)
-    else:
-        signal.add_wire(5, word_y[word][0], 95, word_y[word][0], layer=args.drive_layer, width=args.drive_width)
-    if word % 2 == 0:
-        signal.add_via(Length('100.0 mil'), word_y[word][0], drill = args.pad_drill)
-        signal.add_via(args.width - Length('200.0 mil'), word_y[word][0], drill = args.pad_drill)
-    else:
-        signal.add_via(Length('200.0 mil'), word_y[word][0] - args.drive_pitch, drill = args.pad_drill)
-        signal.add_via(args.width - Length('100.0 mil'), word_y[word][0] - args.drive_pitch, drill = args.pad_drill)
+    if word % 2:
+        cx1 = args.width - Length('100.0 mil')
+        cx2 = args.width - Length('200.0 mil')
+        cy = word_y[word][0] - args.drive_pitch / 2.0
 
-for bit in range(args.bits):
+        x1 = cx2 - args.drive_pitch
+        x2 = bit_x[args.bits][0]
+        y1 = word_y[word][2]
+        y2 = word_y[word][1]
+
+        cx1a = cx1 - args.drive_pitch
+        cy1a = cy + args.drive_pitch
+
+        cx2a = x1 + args.drive_pitch / 2.0
+        cy2a = cy1a
+    else:
+        cx1 = Length('100.0 mil')
+        cx2 = Length('200.0 mil')
+        cy = word_y[word][0] + args.drive_pitch / 2.0
+
+        x1 = cx2 + args.drive_pitch
+        x2 = bit_x[0][0]
+        y1 = word_y[word][1]
+        y2 = word_y[word][2]
+
+        cx1a = cx1 + args.drive_pitch
+        cy1a = cy - args.drive_pitch
+
+        cx2a = x1 - args.drive_pitch / 2.0
+        cy2a = cy1a
+
+    signal.add_wire(cx1,  cy,   cx1a, cy1a, layer=args.drive_layer, width=args.drive_width)
+    signal.add_wire(cx1a, cy1a, cx2a, cy2a, layer=args.drive_layer, width=args.drive_width)
+    signal.add_wire(cx2a, cy2a, x1,   y1,   layer=args.drive_layer, width=args.drive_width)
+    signal.add_wire(x1,   y1,   x2,   y1,   layer=args.drive_layer, width=args.drive_width)
+    signal.add_wire(x2,   y1,   x2,   y2,   layer=args.drive_layer, width=args.drive_width)
+    signal.add_wire(x2,   y2,   x1,   y2,   layer=args.drive_layer, width=args.drive_width)
+    signal.add_wire(x1,   y2,   cx2,  cy,   layer=args.drive_layer, width=args.drive_width)
+
+    signal.add_via(cx1, cy, drill = args.pad_drill)
+    signal.add_via(cx2, cy, drill = args.pad_drill)
+
+if False:
+  for bit in range(args.bits):
     signal = board.add_signal('bit%03d' % bit)
     signal.add_wire(bit_x[bit][0], 5, bit_x[bit][0], 95, width=args.sense_width, layer=args.sense_layer)
     signal.add_wire(bit_x[bit][1], 5, bit_x[bit][1], 95, width=args.sense_width, layer=args.sense_layer)
