@@ -67,7 +67,7 @@ parser.add_argument("--length",            help = "board length", type = Length,
 
 parser.add_argument("--trace-width",       help = "trace width", type = Length, default = Length('8.3 mil'))
 
-parser.add_argument("--drive-layer",       help = "drive layer number", type = int, default = 16)
+parser.add_argument("--drive-layer",       help = "drive layer number", type = int, default = 2)
 parser.add_argument("--drive-pitch",       help = "drive pitch", type = Length, default = Length('50 mil'))
 
 #parser.add_argument("--coupling-length",   help = "drive-to-sense trace coupling length in mils", type = Length, default = Length('40 mil'))
@@ -112,9 +112,8 @@ for i in range(0, len(data), 8):
     data.reverse(i, i+8)
 
 
-board = EagleBoardFile()
+board = EagleBoardFile(numlayers = 4)
 
-# XXX add board outline to dimension layer
 board.add_rectangular_board_outline(0, 0, args.width, args.length);
 
 
