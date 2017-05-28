@@ -49,8 +49,8 @@ def read_data(f, words, bits, stride):
     return data
 
 
-def get_bit(data, word, bit):
-    return 0
+def get_bit(data, word_width, word, bit):
+    return data[word * word_width + bit]
 
 
 show_default_units = ['mil', 'mm']
@@ -101,7 +101,7 @@ parser.add_argument("--pad-drill",         help = "pad drill diameter", type = L
 
 #parser.add_argument("--ground-layer",      help = "ground plane layer number (0 for none)", type = int, default = 15)
 
-parser.add_argument("-i", "--input",      help="ROM data file", type = argparse.FileType('rb'), default = sys.stdin)
+parser.add_argument("input",      help="ROM data file", type = argparse.FileType('rb'))
 parser.add_argument("-o", "--output",     help="new Eagle board file", type = argparse.FileType('wb'), default = sys.stdout)
 
 
@@ -127,7 +127,10 @@ sense_space = (args.sense_pitch - (3 * args.trace_width)) / 3.0
 array_height = args.bits * args.sense_pitch - sense_space
 #print("array height %f %s" % (array_height, default_unit))
 
-#data = read_data(args.input, args.words, args.bits, args.stride)
+data = Bits(args.input)
+if len(data) != args.words * args.bits:
+    raise RuntimeError("input file size %d bits, should be %d bits\n" % (len(data), args.words * args.bits))
+    
 
 
 board = EagleBoardFile()
@@ -257,7 +260,7 @@ for bit in range(args.bits):
         signal.add_wire(cx - args.sense_pitch / 2.0, cy1 + 1.5 * args.sense_pitch, x, y, width=args.trace_width, layer=args.sense_layer)
 
     for word in range(args.words):
-        data_bit = get_bit(None, word, bit)
+        data_bit = get_bit(data, args.bits, word, bit)
         if data_bit:
             x0 = bit_x[bit][1]
             x1 = bit_x[bit][2]
@@ -272,17 +275,17 @@ for bit in range(args.bits):
         signal.add_wire(x1, word_y[word][1], x1, word_y[word][2], width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(x1, word_y[word][2], x0, word_y[word][2], width=args.trace_width, layer=args.sense_layer)
         x = x0
-        y = word_y[word][2]
+        y = word_y[word][2] + 2.0 * args.trace_width
+        signal.add_wire(x0, word_y[word][2], x, y, width = args.trace_width, layer = args.sense_layer)
 
-    signal.add_wire(x, y, x, y + 2.0 * args.trace_width, width = args.trace_width, layer=args.sense_layer)
-    signal.add_wire(x, y + 2.0 * args.trace_width, bit_x[bit][0], y + 2.0 * args.trace_width, width = args.trace_width, layer=args.sense_layer)
+    signal.add_wire(x, y, bit_x[bit][0], y, width = args.trace_width, layer=args.sense_layer)
 
     if bit % 2 == 0:
-        signal.add_wire(bit_x[bit][0], y + 2.0 * args.trace_width, bit_x[bit][0], cy2 - 1.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(bit_x[bit][0], y, bit_x[bit][0], cy2 - 1.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(bit_x[bit][0], cy2 - 1.5 * args.sense_pitch, cx, cy2 - args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(cx, cy2 - args.sense_pitch, cx, cy2, width = args.trace_width, layer=args.sense_layer)
     else:
-        signal.add_wire(bit_x[bit][0], y + 2.0 * args.trace_width, bit_x[bit][0], cy2 - 3.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
+        signal.add_wire(bit_x[bit][0], y, bit_x[bit][0], cy2 - 3.5 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(bit_x[bit][0], cy2 - 3.5 * args.sense_pitch, cx - args.sense_pitch, cy2 - 3.0 * args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(cx - args.sense_pitch, cy2 - 3.0 * args.sense_pitch, cx - args.sense_pitch, cy2 - args.sense_pitch, width=args.trace_width, layer=args.sense_layer)
         signal.add_wire(cx - args.sense_pitch, cy2 - args.sense_pitch, cx, cy2, width=args.trace_width, layer=args.sense_layer)
