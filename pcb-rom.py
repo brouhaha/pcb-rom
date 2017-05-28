@@ -21,32 +21,11 @@ import math
 import sys
 
 # https://github.com/scott-griffiths/bitstring
-from bitstring import Bits
+from bitstring import BitArray
 
 from length import Length, LengthUnit
 
 from eagle import EagleBoardFile, EaglePackage, EagleDeviceset, EagleDevice, EagleRectangle
-
-
-def read_data(f, words, bits, stride):
-    # We can't read in binary from a text file (e.g., stdin),
-    # so if it is a text file, get the underlying binary file
-    if isinstance(f, io.TextIOBase):
-        f = f.buffer
-    data = bytes()
-    print(type(data))
-    bytes_per_word = (bits + 7) // 8
-    if stride is None:
-        stride = bytes_per_word
-    else:
-        assert stride >= bytes_per_word
-    for w in range(words):
-        w = f.read(bytes_per_word)
-        b = Bits(w)
-        data += w
-        if stride > bytes_per_word:
-            f.read(stride - bytes_per_word)
-    return data
 
 
 def get_bit(data, word_width, word, bit):
@@ -76,7 +55,6 @@ parser = argparse.ArgumentParser(description='inductively coupled PCB memory gen
 
 parser.add_argument("-w", "--words",      help = "word count (drive lines)", type = int, default = 64)
 parser.add_argument("-b", "--bits",       help = "bit count (sense loops)", type = int, default = 64)
-parser.add_argument("--stride",           help = "data input word stride in bytes", type = int, default = None)
 
 parser.add_argument("-u", "--unit",
                     help = "default distance measurement unit",
@@ -127,10 +105,11 @@ sense_space = (args.sense_pitch - (3 * args.trace_width)) / 3.0
 array_height = args.bits * args.sense_pitch - sense_space
 #print("array height %f %s" % (array_height, default_unit))
 
-data = Bits(args.input)
+data = BitArray(args.input)
 if len(data) != args.words * args.bits:
     raise RuntimeError("input file size %d bits, should be %d bits\n" % (len(data), args.words * args.bits))
-    
+for i in range(0, len(data), 8):
+    data.reverse(i, i+8)
 
 
 board = EagleBoardFile()
@@ -261,7 +240,7 @@ for bit in range(args.bits):
 
     for word in range(args.words):
         data_bit = get_bit(data, args.bits, word, bit)
-        if data_bit:
+        if data_bit == 0:
             x0 = bit_x[bit][1]
             x1 = bit_x[bit][2]
         else:
