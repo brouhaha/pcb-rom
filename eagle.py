@@ -92,14 +92,14 @@ class EagleLayer(EagleXMLElement):
 
 
 class EagleLayers(EagleXMLElement):
-    def __init__(self):
+    def __init__(self, numlayers = 2):
         super().__init__('layers')
 
         self.layers_by_name = { }
         self.layers_by_number = { }
 
         for layer in [ EagleLayer(1,  'Top',       4,  1,  True,   True),
-                       EagleLayer(2,  'Route2',    1,  3,  False,  True),
+                       EagleLayer(2,  'Route2',    1,  3,  numlayers >= 4,  True),
                        EagleLayer(3,  'Route3',    4,  3,  False,  True),
                        EagleLayer(4,  'Route4',    1,  4,  False,  True),
                        EagleLayer(5,  'Route5',    4,  4,  False,  True),
@@ -112,7 +112,7 @@ class EagleLayers(EagleXMLElement):
                        EagleLayer(12, 'Route12',   1,  5,  False,  True),
                        EagleLayer(13, 'Route13',   4,  5,  False,  True),
                        EagleLayer(14, 'Route14',   1,  6,  False,  True),
-                       EagleLayer(15, 'Route15',   4,  6,  False,  True),
+                       EagleLayer(15, 'Route15',   4,  6,  numlayers >= 4,  True),
                        EagleLayer(16, 'Bottom',    1,  1,  True,   True),
                        EagleLayer(17, 'Pads',      2,  1,  True,   True),
                        EagleLayer(18, 'Vias',      2,  1,  True,   True),
@@ -164,7 +164,7 @@ class EagleLayers(EagleXMLElement):
 
 
 class EagleFile(metaclass = ABCMeta):
-    def __init__(self):
+    def __init__(self, numlayers = 2):
         self.eagle = Element('eagle', { 'version': '6.5.0' })
         self.drawing = SubElement(self.eagle, 'drawing')
 
@@ -174,7 +174,7 @@ class EagleFile(metaclass = ABCMeta):
         self.grid = EagleGrid()
         self.drawing.append(self.grid.get_element())
 
-        self.layers = EagleLayers()
+        self.layers = EagleLayers(numlayers = numlayers)
         self.drawing.append(self.layers.get_element())
 
     # Eagle's XML reader doesn't like extremely long lines, and xml.etree.ElementTree
@@ -407,7 +407,7 @@ class EagleVia(EaglePrimitive):
 
 
 class EagleBoard(EagleXMLElement):
-    def __init__(self):
+    def __init__(self, numlayers = 2):
         super().__init__('board')
         self.plain = EaglePlain()
         self.add_subelement(self.plain.get_element())
@@ -464,8 +464,8 @@ class EagleLibraryFile(EagleFile):
 
 
 class EagleBoardFile(EagleFile):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, numlayers = 2):
+        super().__init__(numlayers)
         self.board = EagleBoard()
         self.drawing.append(self.board.get_element())
 
